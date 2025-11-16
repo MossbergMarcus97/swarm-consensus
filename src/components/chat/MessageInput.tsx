@@ -11,11 +11,19 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { MAX_FILES_PER_MESSAGE } from "@/lib/config";
+import type { LibraryFile, UploadedFileRef } from "@/lib/types";
 
-export type ComposerAttachment = {
-  id: string;
-  file: File;
-};
+export type ComposerAttachment =
+  | {
+      id: string;
+      type: "local";
+      file: File;
+    }
+  | {
+      id: string;
+      type: "library";
+      fileRef: UploadedFileRef;
+    };
 
 type MessageInputProps = {
   agentsCount: number;
@@ -28,11 +36,29 @@ type MessageInputProps = {
     attachments: ComposerAttachment[];
   }) => Promise<void>;
   isSending: boolean;
+  libraryFiles: LibraryFile[];
+  onAttachFromLibrary: (fileId: string) => Promise<void>;
+  onRefreshLibrary: () => void;
+  isLibraryLoading: boolean;
 };
 
 const ACCEPTED_FILES =
   "image/png,image/jpeg,image/webp,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain";
 const AGENT_PRESETS = [1, 4, 8, 16, 32, 64];
+
+function formatBytes(bytes?: number) {
+  if (typeof bytes !== "number" || Number.isNaN(bytes)) {
+    return "—";
+  }
+  const units = ["B", "KB", "MB", "GB"];
+  if (bytes === 0) return "0 B";
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** exponent;
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[exponent]}`;
+}
 
 export function MessageInput({
   agentsCount,
@@ -42,10 +68,15 @@ export function MessageInput({
   onAttachmentsChange,
   onSend,
   isSending,
+  libraryFiles,
+  onAttachFromLibrary,
+  onRefreshLibrary,
+  isLibraryLoading,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
 
   const canSend = message.trim().length > 0 || attachments.length > 0;
+  const attachmentSlotsRemaining = MAX_FILES_PER_MESSAGE - attachments.length;
 
   const handleSend = useCallback(async () => {
     if (!canSend || isSending) return;
@@ -75,6 +106,7 @@ export function MessageInput({
       }
       const nextFiles = files.slice(0, available).map((file) => ({
         id: crypto.randomUUID(),
+        type: "local" as const,
         file,
       }));
       if (files.length > available) {
@@ -111,9 +143,21 @@ export function MessageInput({
           {attachments.map((attachment) => (
             <FileChip
               key={attachment.id}
-              name={attachment.file.name}
-              mimeType={attachment.file.type}
-              size={attachment.file.size}
+              name={
+                attachment.type === "local"
+                  ? attachment.file?.name ?? "Untitled"
+                  : attachment.fileRef?.name ?? "Untitled"
+              }
+              mimeType={
+                attachment.type === "local"
+                  ? attachment.file?.type
+                  : attachment.fileRef?.mimeType
+              }
+              size={
+                attachment.type === "local"
+                  ? attachment.file?.size
+                  : attachment.fileRef?.size
+              }
               onRemove={
                 isSending ? undefined : () => handleRemoveAttachment(attachment.id)
               }
@@ -127,6 +171,71 @@ export function MessageInput({
         disabled={isSending}
         accept={ACCEPTED_FILES}
       />
+
+      <div className="rounded-lg border border-dashed border-border/60 bg-background/70 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              File library
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Reuse anything you&rsquo;ve already uploaded without re-sending the files.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-xs text-primary underline-offset-4 hover:underline disabled:opacity-50"
+            onClick={() => onRefreshLibrary()}
+            disabled={isLibraryLoading}
+          >
+            {isLibraryLoading ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
+        {libraryFiles.length > 0 ? (
+          <div className="mt-3 max-h-48 space-y-2 overflow-auto pr-1 text-sm">
+            {libraryFiles.map((file) => {
+              const isAttached = attachments.some(
+                (attachment) =>
+                  attachment.type === "library" &&
+                  attachment.fileRef?.userFileId === file.id,
+              );
+              return (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between rounded-lg border border-border/60 bg-card/60 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{file.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatBytes(file.size)} ·{" "}
+                      {new Date(file.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary underline-offset-4 hover:underline disabled:opacity-60"
+                    disabled={
+                      isAttached ||
+                      attachmentSlotsRemaining <= 0 ||
+                      isSending ||
+                      isLibraryLoading
+                    }
+                    onClick={() => {
+                      void onAttachFromLibrary(file.id);
+                    }}
+                  >
+                    {isAttached ? "Attached" : "Attach"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Upload files via drag-and-drop above. They stay available across conversations.
+          </p>
+        )}
+      </div>
 
       <Separator />
 

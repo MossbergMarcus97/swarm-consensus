@@ -34,8 +34,8 @@ export function SwarmDrawer({ open, onOpenChange, swarm }: SwarmDrawerProps) {
         </DrawerHeader>
         <Separator />
         {swarm ? (
-          <div className="grid gap-6 overflow-auto p-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <ScrollArea className="h-full">
+          <div className="grid gap-6 overflow-auto p-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,360px)] xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,400px)]">
+            <ScrollArea className="max-h-[calc(90vh-140px)] pr-2">
               <div className="space-y-6 pr-4">
                 <section>
                   <SectionHeader title="Winner" />
@@ -71,6 +71,12 @@ export function SwarmDrawer({ open, onOpenChange, swarm }: SwarmDrawerProps) {
                 <SectionHeader title="Judge notes" />
                 <JudgeNotesList votes={swarm.votes} />
               </section>
+              {swarm.webFindings?.length ? (
+                <section>
+                  <SectionHeader title="Web findings" />
+                  <WebFindingsList findings={swarm.webFindings} />
+                </section>
+              ) : null}
               <section>
                 <SectionHeader title="Final rationale" />
                 <ExpandableText content={swarm.finalReasoning} previewLength={260} />
@@ -186,6 +192,38 @@ function JudgeNotesList({
         <div key={vote.id} className="rounded-lg border border-border/70 bg-background/60 p-3">
           <p className="font-semibold text-foreground">{vote.judgeName}</p>
           <ExpandableText content={formatJudgeNotes(vote.notes)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WebFindingsList({
+  findings,
+}: {
+  findings: NonNullable<SwarmTurnResult["webFindings"]>;
+}) {
+  return (
+    <div className="space-y-3 text-xs text-muted-foreground">
+      {findings.map((finding, index) => (
+        <div
+          key={`${finding.url}-${index}`}
+          className="rounded-lg border border-border/70 bg-background/60 p-3"
+        >
+          <a
+            href={finding.url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            {finding.title || `Result ${index + 1}`}
+          </a>
+          <p className="text-[11px] text-muted-foreground">
+            {finding.publishedAt
+              ? `Published ${new Date(finding.publishedAt).toLocaleDateString()}`
+              : finding.url}
+          </p>
+          <ExpandableText content={finding.snippet} />
         </div>
       ))}
     </div>

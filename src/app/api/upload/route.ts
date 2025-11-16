@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 
 import OpenAI from "openai";
 
+import { auth } from "@/auth";
 import { MAX_FILE_SIZE_MB, MAX_FILES_PER_MESSAGE } from "@/lib/config";
 import { getOpenAIClient } from "@/lib/openaiClient";
+import { prisma } from "@/lib/prisma";
 import type { UploadedFileRef } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -25,6 +27,11 @@ const MAX_FILE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const incomingFiles = formData
       .getAll("files")
@@ -72,12 +79,24 @@ export async function POST(request: Request) {
         purpose: "assistants",
       });
 
+      const record = await prisma.userFile.create({
+        data: {
+          userId: session.user.id,
+          name: file.name,
+          mimeType: file.type,
+          size: file.size,
+          openAiFileId: uploadedFile.id,
+        },
+      });
+
       uploaded.push({
-        id: crypto.randomUUID(),
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-        openAiFileId: uploadedFile.id,
+        id: record.id,
+        userFileId: record.id,
+        name: record.name,
+        mimeType: record.mimeType,
+        size: record.size,
+        openAiFileId: record.openAiFileId,
+        createdAt: record.createdAt.toISOString(),
       });
     }
 

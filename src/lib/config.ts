@@ -7,6 +7,18 @@ export const MAX_FILE_SIZE_MB = Number(
 );
 export const MAX_HISTORY_TURNS = 6;
 export const FINALIZER_RUNNER_UP_COUNT = 3;
+export const SWARM_RUNTIME_BUDGET_SECONDS = Number(
+  process.env.SWARM_RUNTIME_BUDGET_SECONDS ?? 280,
+);
+const FAST_AGENT_COST_SECONDS = Number(
+  process.env.SWARM_FAST_AGENT_COST_SECONDS ?? 1.4,
+);
+const REASONING_AGENT_COST_SECONDS = Number(
+  process.env.SWARM_REASONING_AGENT_COST_SECONDS ?? 4.25,
+);
+const DISCUSSION_TIME_MULTIPLIER = Number(
+  process.env.SWARM_DISCUSSION_TIME_MULTIPLIER ?? 1.75,
+);
 
 export const MODEL_PRESETS = {
   fast: {
@@ -43,6 +55,23 @@ export type ModelPresetKey = keyof typeof MODEL_PRESETS;
 
 export function getModelPreset(mode: ModelPresetKey) {
   return MODEL_PRESETS[mode] ?? MODEL_PRESETS.fast;
+}
+
+export function estimateSwarmRuntimeSeconds({
+  agentsCount,
+  mode,
+  discussionEnabled,
+}: {
+  agentsCount: number;
+  mode: ModelPresetKey;
+  discussionEnabled: boolean;
+}) {
+  const perAgent =
+    mode === "reasoning"
+      ? REASONING_AGENT_COST_SECONDS
+      : FAST_AGENT_COST_SECONDS;
+  const discussionFactor = discussionEnabled ? DISCUSSION_TIME_MULTIPLIER : 1;
+  return agentsCount * perAgent * discussionFactor;
 }
 
 

@@ -1,9 +1,27 @@
 export type UploadedFileRef = {
   id: string;
+  userFileId?: string;
   name: string;
   mimeType: string;
   size: number;
   openAiFileId?: string;
+  createdAt?: string;
+};
+
+export type LibraryFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  openAiFileId: string;
+  createdAt: string;
+};
+
+export type WebSearchFinding = {
+  title: string;
+  url: string;
+  snippet: string;
+  publishedAt?: string;
 };
 
 export type WorkerAgentProfile = {
@@ -84,6 +102,7 @@ export type Conversation = {
   updatedAt: string;
   mode: SwarmMode;
   discussionEnabled: boolean;
+  webBrowsingEnabled: boolean;
   messages: ChatMessage[];
 };
 
@@ -95,6 +114,7 @@ export type SwarmTurnParams = {
   history: MinimalHistory[];
   mode: SwarmMode;
   discussionEnabled: boolean;
+  webBrowsingEnabled: boolean;
 };
 
 export type SwarmTurnResult = {
@@ -104,5 +124,6 @@ export type SwarmTurnResult = {
   candidates: CandidateAnswer[];
   votes: JudgeVote[];
   votingResult: VotingResult;
+  webFindings?: WebSearchFinding[];
 };
 

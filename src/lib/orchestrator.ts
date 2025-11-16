@@ -11,6 +11,7 @@ import {
   callJudgeModel,
   callWorkerModel,
 } from "@/lib/openaiClient";
+import { runWebSearch } from "@/lib/tools/webSearch";
 import type {
   CandidateAnswer,
   JudgeVote,
@@ -21,6 +22,7 @@ import type {
   VotingResult,
   WorkerAgentProfile,
   JudgeAgentProfile,
+  WebSearchFinding,
 } from "@/lib/types";
 
 type ResponseInputContent =
@@ -59,7 +61,15 @@ const HISTORY_CHAR_LIMIT = 2400;
 export async function runSwarmTurn(
   params: SwarmTurnParams,
 ): Promise<SwarmTurnResult> {
-  const { userMessage, agentsCount, files = [], history = [], mode, discussionEnabled } = params;
+  const {
+    userMessage,
+    agentsCount,
+    files = [],
+    history = [],
+    mode,
+    discussionEnabled,
+    webBrowsingEnabled,
+  } = params;
 
   if (!userMessage?.trim()) {
     throw new Error("Message cannot be empty.");
@@ -69,6 +79,17 @@ export async function runSwarmTurn(
   const fileParts = buildFileParts(files);
   const workers = selectWorkers(agentsCount);
   const modelPreset = getModelPreset(mode);
+  let webFindings: WebSearchFinding[] = [];
+  let webSummary = "";
+
+  if (webBrowsingEnabled) {
+    try {
+      webFindings = await runWebSearch(userMessage, { maxResults: 5 });
+      webSummary = formatWebFindings(webFindings);
+    } catch (error) {
+      console.warn("Web search failed", error);
+    }
+  }
 
   let candidates = await Promise.all(
     workers.map((worker) =>
@@ -77,6 +98,7 @@ export async function runSwarmTurn(
         userMessage,
         historySnippet,
         fileParts,
+        webSummary,
         model: modelPreset.worker,
         reasoningEffort: mode === "reasoning" ? "medium" : undefined,
       }),
@@ -103,6 +125,7 @@ export async function runSwarmTurn(
         judge,
         userMessage,
         candidates,
+        webSummary,
         model: modelPreset.judge,
         reasoningEffort: mode === "reasoning" ? "medium" : undefined,
       }),
@@ -114,6 +137,7 @@ export async function runSwarmTurn(
     userMessage,
     candidates,
     votingResult,
+    webSummary,
     model: modelPreset.finalizer,
     enableReasoning: mode === "reasoning",
   });
@@ -128,6 +152,7 @@ export async function runSwarmTurn(
     candidates,
     votes,
     votingResult,
+    webFindings: webFindings.length ? webFindings : undefined,
   };
 }
 
@@ -157,6 +182,7 @@ async function runWorkerCandidate({
   userMessage,
   historySnippet,
   fileParts,
+  webSummary,
   model,
   reasoningEffort,
 }: {
@@ -164,6 +190,7 @@ async function runWorkerCandidate({
   userMessage: string;
   historySnippet: string;
   fileParts: ResponseInputContent[];
+  webSummary: string;
   model: string;
   reasoningEffort?: "low" | "medium" | "high";
 }): Promise<CandidateAnswer> {
@@ -183,6 +210,7 @@ async function runWorkerCandidate({
               type: "input_text",
               text: [
                 historySnippet ? `Recent turns:\n${historySnippet}` : "",
+                webSummary ? `Live web findings:\n${webSummary}` : "",
                 `User question:\n${userMessage}`,
                 "Provide your best answer and explain your reasoning.",
               ]
@@ -315,12 +343,14 @@ async function runJudgeVote({
   judge,
   userMessage,
   candidates,
+  webSummary,
   model,
   reasoningEffort,
 }: {
   judge: JudgeAgentProfile;
   userMessage: string;
   candidates: CandidateAnswer[];
+  webSummary: string;
   model: string;
   reasoningEffort?: "low" | "medium" | "high";
 }): Promise<JudgeVote> {
@@ -339,6 +369,7 @@ async function runJudgeVote({
               type: "input_text",
               text: [
                 `User question:\n${userMessage}`,
+                webSummary ? `Live web findings:\n${webSummary}` : "",
                 "Candidate answers:",
                 candidates
                   .map(
@@ -392,12 +423,14 @@ async function runFinalizer({
   userMessage,
   candidates,
   votingResult,
+  webSummary,
   model,
   enableReasoning,
 }: {
   userMessage: string;
   candidates: CandidateAnswer[];
   votingResult: VotingResult;
+  webSummary: string;
   model: string;
   enableReasoning: boolean;
 }): Promise<FinalizerJson> {
@@ -439,6 +472,7 @@ async function runFinalizer({
             type: "input_text",
             text: [
               `User question:\n${userMessage}`,
+              webSummary ? `Live web findings:\n${webSummary}` : "",
               "Winning candidate:",
               `Agent: ${winner.workerName} (${winner.workerRoleDescription})`,
               `Answer:\n${winner.answer}`,
@@ -568,5 +602,23 @@ function extractErrorMessage(error: unknown) {
     return error;
   }
   return "Unknown error";
+}
+
+function formatWebFindings(findings: WebSearchFinding[]) {
+  if (!findings.length) {
+    return "";
+  }
+  return findings
+    .map((finding, index) => {
+      const published = finding.publishedAt
+        ? ` · Published: ${finding.publishedAt}`
+        : "";
+      return [
+        `${index + 1}. ${finding.title}${published}`,
+        `URL: ${finding.url}`,
+        `Summary: ${truncate(finding.snippet, 320)}`,
+      ].join("\n");
+    })
+    .join("\n\n");
 }
 
