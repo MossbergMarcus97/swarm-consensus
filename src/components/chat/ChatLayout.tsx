@@ -2,7 +2,7 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   MAX_FILES_PER_MESSAGE,
   MAX_WORKERS,
@@ -33,6 +34,7 @@ import type {
   LibraryFile,
   MinimalHistory,
   SwarmMode,
+  AIProvider,
   SwarmTurnResult,
   UploadedFileRef,
 } from "@/lib/types";
@@ -44,6 +46,7 @@ type ChatResponse = SwarmTurnResult & { conversationId: string };
 function createConversation(
   title = DEFAULT_CONVERSATION_TITLE,
   mode: SwarmMode = "fast",
+  provider: AIProvider = "openai",
   discussionEnabled = false,
   webBrowsingEnabled = false,
 ): Conversation {
@@ -54,6 +57,7 @@ function createConversation(
     createdAt: now,
     updatedAt: now,
     mode,
+    provider,
     discussionEnabled,
     webBrowsingEnabled,
     messages: [],
@@ -74,6 +78,8 @@ export function ChatLayout() {
   );
   const [isInitialized, setIsInitialized] = useState(false);
   const [conversationSearchQuery, setConversationSearchQuery] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
   const queryClient = useQueryClient();
   const persistConversations = useCallback(
     (next: Conversation[]) => {
@@ -180,6 +186,7 @@ export function ChatLayout() {
     list = list.map((conversation) => ({
       ...conversation,
       mode: conversation.mode ?? "fast",
+      provider: conversation.provider ?? "openai",
       discussionEnabled: conversation.discussionEnabled ?? false,
       webBrowsingEnabled: conversation.webBrowsingEnabled ?? false,
     }));
@@ -226,6 +233,7 @@ export function ChatLayout() {
     [activeConversation],
   );
   const currentMode = activeConversation?.mode ?? "fast";
+  const currentProvider = activeConversation?.provider ?? "openai";
   const discussionEnabled = activeConversation?.discussionEnabled ?? false;
   const runtimeSecondsEstimate = estimateSwarmRuntimeSeconds({
     agentsCount,
@@ -273,6 +281,7 @@ export function ChatLayout() {
       history: MinimalHistory[];
       agentsCount: number;
       mode: SwarmMode;
+      provider: AIProvider;
       discussionEnabled: boolean;
       webBrowsingEnabled: boolean;
     }): Promise<ChatResponse> => {
@@ -285,6 +294,7 @@ export function ChatLayout() {
           history: payload.history,
           agentsCount: payload.agentsCount,
           mode: payload.mode,
+          provider: payload.provider,
           discussionEnabled: payload.discussionEnabled,
           webBrowsingEnabled: payload.webBrowsingEnabled,
         }),
@@ -384,6 +394,7 @@ export function ChatLayout() {
         history: historyPayload,
         agentsCount,
         mode: currentMode,
+        provider: currentProvider,
         discussionEnabled,
         webBrowsingEnabled,
       });
@@ -452,6 +463,19 @@ export function ChatLayout() {
       const updated = prev.map((conversation) =>
         conversation.id === activeConversationId
           ? { ...conversation, mode }
+          : conversation,
+      );
+      persistConversations(updated);
+      return updated;
+    });
+  };
+
+  const handleProviderChange = (provider: AIProvider) => {
+    if (provider === currentProvider || !activeConversationId) return;
+    setConversations((prev) => {
+      const updated = prev.map((conversation) =>
+        conversation.id === activeConversationId
+          ? { ...conversation, provider }
           : conversation,
       );
       persistConversations(updated);
@@ -539,41 +563,37 @@ export function ChatLayout() {
   const renderConversationRow = (conversation: Conversation) => (
     <div
       key={conversation.id}
-      className={`flex flex-col gap-1 border-b border-border/40 p-3 text-left transition ${
+      className={`flex flex-col gap-1 border-b border-border/40 p-3 text-left transition cursor-pointer ${
         conversation.id === activeConversationId
-          ? "bg-muted text-primary"
-          : "text-foreground hover:bg-muted"
+          ? "bg-muted/60 text-primary"
+          : "text-foreground hover:bg-muted/40"
       }`}
+      onClick={() => setActiveConversationId(conversation.id)}
     >
       <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          className="text-left text-sm font-semibold"
-          onClick={() => setActiveConversationId(conversation.id)}
-        >
-          {conversation.title}
-        </button>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded-full bg-muted-foreground/10 px-2 py-0.5 capitalize text-muted-foreground">
+        <span className="text-sm font-medium truncate">{conversation.title}</span>
+        <div className="flex items-center gap-2 text-[10px] shrink-0">
+          <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">
             {conversation.mode}
           </span>
-          {conversation.discussionEnabled ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900">
-              Discussion
-            </span>
-          ) : null}
-          <button
-            type="button"
-            className="text-destructive underline-offset-4 hover:underline"
-            onClick={() => handleDeleteConversation(conversation.id)}
-          >
-            Delete
-          </button>
+          {conversation.discussionEnabled && (
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500/50" title="Discussion On" />
+          )}
         </div>
       </div>
-      <span className="text-[11px] text-muted-foreground">
-        {new Date(conversation.updatedAt).toLocaleString()}
-      </span>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>{new Date(conversation.updatedAt).toLocaleDateString()}</span>
+        <button
+          type="button"
+          className="hover:text-destructive transition-colors px-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteConversation(conversation.id);
+          }}
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 
@@ -586,495 +606,423 @@ export function ChatLayout() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[2200px] flex-col gap-4 px-4 pb-8 pt-4 lg:px-6 xl:px-10">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-sm font-medium text-primary">Swarm Consensus</p>
-          <h1 className="text-2xl font-semibold leading-tight">
-            Parallel perspectives for confident decisions
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Upload rich context, fan out up to 64 mini models, and keep the entire swarm
-            in view. Adjust the panel widths as your screen grows—the center canvas scales
-            with you.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 rounded-full border border-border/70 bg-card/70 px-4 py-2 text-sm">
-          <div className="text-left">
-            <p className="text-xs text-muted-foreground">Signed in as</p>
-            <p className="truncate font-semibold text-foreground max-w-[220px]">
-              {session?.user?.name ??
-                session?.user?.email ??
-                (sessionStatus === "loading" ? "Checking session…" : "Signed in")}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: "/sign-in" })}
-            className="text-xs font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <div className="hidden flex-1 gap-4 lg:grid lg:grid-cols-[minmax(250px,320px)_minmax(0,1.4fr)_minmax(320px,380px)] xl:grid-cols-[minmax(260px,360px)_minmax(0,1.6fr)_minmax(340px,420px)] 2xl:grid-cols-[minmax(280px,380px)_minmax(0,1.8fr)_minmax(360px,440px)]">
-        <Card className="rounded-xl border border-border/60 bg-card/40 p-0 text-sm">
-          <div className="flex items-center justify-between border-b border-border/50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Conversations
-            </p>
-            <button
-              type="button"
-              className="text-xs text-primary underline-offset-4 hover:underline"
+    <div className="mx-auto flex h-screen w-full max-w-[2200px] overflow-hidden bg-background">
+      {/* Sidebar - Desktop */}
+      <div
+        className={`${
+          sidebarOpen ? "w-[280px] xl:w-[320px]" : "w-0"
+        } hidden flex-col border-r border-border/60 bg-card/30 transition-all duration-300 ease-in-out lg:flex relative shrink-0`}
+      >
+        <div className={`flex flex-col h-full w-[280px] xl:w-[320px] ${!sidebarOpen && "invisible"}`}>
+          <div className="p-4 border-b border-border/40 flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">Conversations</h2>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
               onClick={handleCreateConversation}
             >
-              + New
-            </button>
+              <span className="text-lg leading-none mb-0.5">+</span>
+            </Button>
           </div>
-          <div className="space-y-2 border-b border-border/50 p-3">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Search</span>
-              {hasSearchQuery ? (
-                <button
-                  type="button"
-                  className="text-[11px] font-medium lowercase text-primary underline-offset-4 hover:underline"
-                  onClick={() => setConversationSearchQuery("")}
-                >
-                  Clear
-                </button>
-              ) : null}
-            </div>
+          
+          <div className="p-3 border-b border-border/40">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={conversationSearchQuery}
                 onChange={(event) => setConversationSearchQuery(event.target.value)}
-                placeholder="Search titles & transcripts"
-                className="pl-9"
+                placeholder="Filter..."
+                className="h-8 pl-8 text-xs bg-background/50"
               />
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Showing {filteredConversations.length} of {conversations.length} chats.
-            </p>
           </div>
-          <div className="max-h-[calc(100vh-260px)] overflow-auto 2xl:max-h-[calc(100vh-220px)]">
+
+          <div className="flex-1 overflow-y-auto">
             {noConversationMatches ? (
               <div className="p-4 text-center text-xs text-muted-foreground">
-                No matches for &quot;
-                {conversationSearchQuery.trim()}
-                &quot;. Adjust your search.
+                No matches found.
               </div>
             ) : filteredConversations.length ? (
-              filteredConversations.map(renderConversationRow)
+              <div className="flex flex-col">
+                {filteredConversations.map(renderConversationRow)}
+              </div>
             ) : (
-              <div className="p-4 text-xs text-muted-foreground">
-                Start a conversation to see it here.
+              <div className="p-4 text-xs text-muted-foreground text-center">
+                Start a new chat.
               </div>
             )}
           </div>
-          <div className="border-t border-border/50 p-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                File library
-              </p>
-              <button
-                type="button"
-                className="text-xs text-primary underline-offset-4 hover:underline disabled:opacity-50"
+
+          <div className="p-3 border-t border-border/40 bg-card/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground">File Library</span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-[10px]"
                 onClick={handleRefreshLibrary}
                 disabled={isLibraryLoading}
               >
-                {isLibraryLoading ? "Refreshing…" : "Refresh"}
-              </button>
+                Refresh
+              </Button>
             </div>
-            <div className="mt-3 space-y-2">
-              {libraryFiles.length ? (
-                libraryFiles.map((file) => {
-                  const isAttached = attachments.some(
-                    (attachment) =>
-                      attachment.type === "library" &&
-                      attachment.fileRef?.userFileId === file.id,
-                  );
-                  return (
-                    <div
-                      key={file.id}
-                      className="rounded-lg border border-border/50 bg-background/70 p-3 text-xs"
-                    >
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {file.name}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatBytes(file.size)} ·{" "}
-                        {new Date(file.createdAt).toLocaleDateString()}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="rounded-full border px-3 py-0.5 text-[11px] font-medium text-primary transition hover:bg-primary/10 disabled:opacity-60"
-                          onClick={() => void handleAttachLibraryFile(file.id)}
-                          disabled={
-                            isAttached ||
-                            attachments.length >= MAX_FILES_PER_MESSAGE ||
-                            attachLibraryMutation.isPending
-                          }
-                        >
-                          {isAttached ? "Attached" : "Attach"}
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full border border-destructive/40 px-3 py-0.5 text-[11px] text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
-                          onClick={() => deleteFileMutation.mutate(file.id)}
-                          disabled={deleteFileMutation.isPending}
-                        >
-                          Delete
-                        </button>
-                      </div>
+            <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+              {libraryFiles.map((file) => {
+                 const isAttached = attachments.some(
+                  (attachment) =>
+                    attachment.type === "library" &&
+                    attachment.fileRef?.userFileId === file.id,
+                );
+                return (
+                  <div key={file.id} className="group flex items-center justify-between rounded-md border border-border/40 bg-background/50 px-2 py-1.5">
+                    <div className="min-w-0 flex-1 mr-2">
+                      <p className="text-[11px] font-medium truncate">{file.name}</p>
+                      <p className="text-[9px] text-muted-foreground">{formatBytes(file.size)}</p>
                     </div>
-                  );
-                })
-              ) : (
-                <p className="text-[11px] text-muted-foreground">
-                  Uploaded files will appear here for reuse across conversations.
-                </p>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        className="text-[10px] text-primary hover:underline disabled:opacity-50"
+                        disabled={isAttached || attachments.length >= MAX_FILES_PER_MESSAGE}
+                        onClick={() => void handleAttachLibraryFile(file.id)}
+                      >
+                        Add
+                      </button>
+                      <button
+                        className="text-[10px] text-destructive hover:underline"
+                        onClick={() => deleteFileMutation.mutate(file.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+              {!libraryFiles.length && (
+                <p className="text-[10px] text-muted-foreground italic text-center py-2">Empty library</p>
               )}
             </div>
           </div>
-        </Card>
 
-        <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
-          <div className="flex-1 overflow-hidden min-w-0">
-            <MessageList
-              messages={messages}
-              isStreaming={isSending}
-              onViewSwarm={handleViewSwarm}
-            />
+          <div className="p-3 border-t border-border/40 flex items-center justify-between text-xs">
+             <div className="flex items-center gap-2 max-w-[180px]">
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                  {(session?.user?.name?.[0] ?? "U").toUpperCase()}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-medium truncate">{session?.user?.name ?? "User"}</span>
+                  <span className="text-muted-foreground text-[10px] truncate">{session?.user?.email}</span>
+                </div>
+             </div>
+             <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            >
+              <svg width="12" height="12" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 2C2.44772 2 2 2.44772 2 3V12C2 12.5523 2.44772 13 3 13H12C12.5523 13 13 12.5523 13 12V8.5C13 8.22386 13.2239 8 13.5 8C13.7761 8 14 8.22386 14 8.5V12C14 13.1046 13.1046 14 12 14H3C1.89543 14 1 13.1046 1 12V3C1 1.89543 1.89543 1 3 1H6.5C6.77614 1 7 1.22386 7 1.5C7 1.77614 6.77614 2 6.5 2H3ZM12.8536 2.14645C12.9015 2.19439 12.9377 2.24964 12.9621 2.30861C12.9861 2.36669 12.9996 2.4303 13 2.497L13 2.5V2.50049V5.5C13 5.77614 12.7761 6 12.5 6C12.2239 6 12 5.77614 12 5.5V3.70711L6.85355 8.85355C6.65829 9.04882 6.34171 9.04882 6.14645 8.85355C5.95118 8.65829 5.95118 8.34171 6.14645 8.14645L11.2929 3H9.5C9.22386 3 9 2.77614 9 2.5C9 2.22386 9.22386 2 9.5 2H12.4999H12.5C12.5678 2 12.6324 2.01341 12.6914 2.03794C12.7504 2.06234 12.8056 2.09851 12.8536 2.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
+             </Button>
           </div>
-          <div className="rounded-xl border border-border/60 bg-card/70 p-4 space-y-4">
+        </div>
+        
+        {/* Desktop Sidebar Toggle (Inside Sidebar) */}
+        <div className="absolute right-[-12px] top-1/2 z-10 translate-y-[-50%]">
+           <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 rounded-full border shadow-sm bg-background"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <PanelLeftClose className="h-3 w-3" /> : <PanelLeftOpen className="h-3 w-3" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar Toggle (When Closed) */}
+      {!sidebarOpen && (
+        <div className="hidden lg:block absolute left-4 top-4 z-10">
+           <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-md border shadow-sm bg-background/80 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Main Chat Area */}
+      <div className="flex min-w-0 flex-1 flex-col h-full relative">
+        <header className="flex items-center justify-between border-b border-border/40 px-6 py-3 bg-background/50 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-2">
+             {!sidebarOpen && <div className="w-8" />} {/* Spacer for toggle button */}
+             <div>
+               <h1 className="text-sm font-semibold text-foreground">{activeConversation.title}</h1>
+               <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                 <span>{currentMode === 'fast' ? 'Fast Mode' : 'Reasoning Mode'}</span>
+                 <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground" />
+                 <span>{currentProvider === 'openai' ? 'OpenAI' : 'Gemini'}</span>
+               </p>
+             </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-hidden relative flex flex-col">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <MessageList
+                messages={messages}
+                isStreaming={isSending}
+                onViewSwarm={handleViewSwarm}
+              />
+            </div>
+            
+            <div className="p-4 lg:p-6 max-w-4xl mx-auto w-full shrink-0">
+               <MessageInput
+                agentsCount={agentsCount}
+                maxAgents={MAX_WORKERS}
+                onAgentsChange={setAgentsCount}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                onSend={handleSend}
+                isSending={isSending}
+                libraryFiles={libraryFiles}
+                onAttachFromLibrary={handleAttachLibraryFile}
+                onRefreshLibrary={handleRefreshLibrary}
+                isLibraryLoading={isLibraryLoading || attachLibraryMutation.isPending}
+              />
+              <div className="mt-2 text-[10px] text-center text-muted-foreground/60">
+                 Swarm Runtime: ~{formattedRuntimeSeconds}s / {SWARM_RUNTIME_BUDGET_SECONDS}s
+              </div>
+            </div>
+        </div>
+      </div>
+
+      {/* Settings / Controls Sidebar (Right Side) */}
+      <div className="hidden lg:flex w-[280px] flex-col border-l border-border/60 bg-card/20 p-4 gap-6 shrink-0 overflow-y-auto">
+         <div className="space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Swarm mode
-              </p>
-              <div className="mt-2 inline-flex rounded-full border border-border bg-background">
-                {(["fast", "reasoning"] as SwarmMode[]).map((mode) => (
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Configuration</h3>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-lg">
+                 {(["fast", "reasoning"] as SwarmMode[]).map((mode) => (
                   <button
                     key={mode}
-                    type="button"
-                    className={`rounded-full px-3 py-1 text-xs transition ${
-                      mode === currentMode
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                    className={`text-xs py-1.5 px-2 rounded-md transition-all font-medium ${
+                      currentMode === mode 
+                      ? "bg-background shadow-sm text-foreground" 
+                      : "text-muted-foreground hover:text-foreground"
                     }`}
                     onClick={() => handleModeChange(mode)}
                   >
-                    {mode === "fast" ? "Fast · 5.1 mini" : "Reasoning · 5.1 thinking"}
+                    {mode === "fast" ? "Fast" : "Reasoning"}
                   </button>
-                ))}
+                 ))}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Fast mode defaults to GPT-5 mini across workers/judges/finalizer. Reasoning switches
-                the entire swarm to GPT-5 Thinking for deeper analysis.
-              </p>
-              <p
-                className={`text-xs ${runtimeIsRisky ? "text-amber-600" : "text-muted-foreground"}`}
-              >
-                Est. runtime ≈ {formattedRuntimeSeconds}s (limit {SWARM_RUNTIME_BUDGET_SECONDS}s).
-              </p>
             </div>
-            <div className="rounded-lg border border-dashed border-border/80 p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Agent discussion
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Let workers see each other’s proposals and refine their answers before judges vote.
-                  </p>
-                </div>
+
+            <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-lg">
+               {(["openai", "gemini"] as AIProvider[]).map((provider) => (
                 <button
-                  type="button"
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    discussionEnabled
-                      ? "border-green-500 bg-green-500/10 text-green-700"
-                      : "border-border text-muted-foreground"
+                  key={provider}
+                  className={`text-xs py-1.5 px-2 rounded-md transition-all font-medium ${
+                    currentProvider === provider 
+                    ? "bg-background shadow-sm text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
                   }`}
-                  onClick={() => handleDiscussionToggle(!discussionEnabled)}
+                  onClick={() => handleProviderChange(provider)}
                 >
-                  {discussionEnabled ? "On" : "Off"}
+                  {provider === "openai" ? "OpenAI" : "Gemini"}
                 </button>
-              </div>
+               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-border/80 p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Web browsing
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Pull fresh search snippets (Tavily) for this conversation. Slower + external API usage.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    webBrowsingEnabled
-                      ? "border-blue-500 bg-blue-500/10 text-blue-700"
-                      : "border-border text-muted-foreground"
-                  }`}
-                  onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
-                >
-                  {webBrowsingEnabled ? "On" : "Off"}
-                </button>
-              </div>
-            </div>
-          </div>
-          <MessageInput
-            agentsCount={agentsCount}
-            maxAgents={MAX_WORKERS}
-            onAgentsChange={setAgentsCount}
-            attachments={attachments}
-            onAttachmentsChange={setAttachments}
-            onSend={handleSend}
-            isSending={isSending}
-            libraryFiles={libraryFiles}
-            onAttachFromLibrary={handleAttachLibraryFile}
-            onRefreshLibrary={handleRefreshLibrary}
-            isLibraryLoading={isLibraryLoading || attachLibraryMutation.isPending}
-          />
-        </div>
 
-        <Card className="rounded-xl border border-border/60 bg-card/60 p-4 text-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Latest winner
-          </p>
-          {latestSwarm ? (
-            <div className="mt-4 space-y-3">
-              <p className="text-base font-semibold">
-                {latestSwarm.candidates.find(
-                  (candidate) =>
-                    candidate.id === latestSwarm.votingResult.winnerId,
-                )?.workerName ?? "Unknown agent"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {latestSwarm.finalReasoning}
-              </p>
-              <button
-                type="button"
-                className="text-primary underline-offset-4 hover:underline"
-                onClick={() => handleViewSwarm(latestSwarm)}
-              >
-                Inspect swarm →
-              </button>
-            </div>
-          ) : (
-            <p className="mt-2 text-muted-foreground">
-              Run your first prompt to see the swarm ranked results.
-            </p>
-          )}
-        </Card>
-      </div>
-
-      <div className="space-y-4 lg:hidden">
-        <Card className="rounded-xl border border-border/60 bg-card/70 p-0 text-sm">
-          <div className="flex items-center justify-between border-b border-border/50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Conversations
-            </p>
-            <button
-              type="button"
-              className="text-xs text-primary underline-offset-4 hover:underline"
-              onClick={handleCreateConversation}
-            >
-              + New
-            </button>
-          </div>
-          <div className="space-y-2 border-b border-border/50 p-3">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Search</span>
-              {hasSearchQuery ? (
-                <button
-                  type="button"
-                  className="text-[11px] font-medium lowercase text-primary underline-offset-4 hover:underline"
-                  onClick={() => setConversationSearchQuery("")}
-                >
-                  Clear
-                </button>
-              ) : null}
-            </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={conversationSearchQuery}
-                onChange={(event) => setConversationSearchQuery(event.target.value)}
-                placeholder="Search titles & transcripts"
-                className="pl-9"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Showing {filteredConversations.length} of {conversations.length} chats.
-            </p>
-          </div>
-          <div className="max-h-72 overflow-auto">
-            {noConversationMatches ? (
-              <div className="p-4 text-center text-xs text-muted-foreground">
-                No matches for &quot;
-                {conversationSearchQuery.trim()}
-                &quot;.
-              </div>
-            ) : filteredConversations.length ? (
-              filteredConversations.map(renderConversationRow)
-            ) : (
-              <div className="p-4 text-xs text-muted-foreground">
-                Start a conversation to see it here.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="perspectives">Perspectives</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          <TabsContent value="chat" className="mt-4 space-y-4">
-            <MessageList
-              messages={messages}
-              isStreaming={isSending}
-              onViewSwarm={handleViewSwarm}
-            />
-            <div className="rounded-xl border border-border/60 bg-card/70 p-3 space-y-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Swarm mode
-                </p>
-                <div className="mt-2 inline-flex w-full flex-wrap gap-1 rounded-full border border-border bg-background p-1">
-                  {(["fast", "reasoning"] as SwarmMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className={`flex-1 rounded-full px-3 py-1 text-xs transition ${
-                        mode === currentMode
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => handleModeChange(mode)}
-                    >
-                      {mode === "fast" ? "Fast · 5.1 mini" : "Reasoning · 5.1 thinking"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p
-                className={`text-xs ${runtimeIsRisky ? "text-amber-600" : "text-muted-foreground"}`}
-              >
-                Est. runtime ≈ {formattedRuntimeSeconds}s (limit {SWARM_RUNTIME_BUDGET_SECONDS}s).
-              </p>
-              <div className="rounded-lg border border-dashed border-border/80 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Agent discussion
-                  </p>
+            <div className="space-y-3 pt-2">
+               <div className="flex items-center justify-between rounded-md border border-border/40 p-3 bg-background/40">
+                  <div>
+                    <p className="text-xs font-medium">Discussion</p>
+                    <p className="text-[9px] text-muted-foreground">Inter-agent refinement</p>
+                  </div>
                   <button
-                    type="button"
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                      discussionEnabled
-                        ? "border-green-500 bg-green-500/10 text-green-700"
-                        : "border-border text-muted-foreground"
+                    className={`w-9 h-5 rounded-full transition-colors relative ${
+                      discussionEnabled ? "bg-primary" : "bg-muted"
                     }`}
                     onClick={() => handleDiscussionToggle(!discussionEnabled)}
                   >
-                    {discussionEnabled ? "On" : "Off"}
+                    <div className={`absolute top-1 left-1 bg-background w-3 h-3 rounded-full transition-transform ${
+                      discussionEnabled ? "translate-x-4" : "translate-x-0"
+                    }`} />
                   </button>
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Workers share and revise ideas before the judges weigh in.
-                </p>
-              </div>
-            <div className="rounded-lg border border-dashed border-border/80 p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Web browsing
-                </p>
-                <button
-                  type="button"
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    webBrowsingEnabled
-                      ? "border-blue-500 bg-blue-500/10 text-blue-700"
-                      : "border-border text-muted-foreground"
-                  }`}
-                  onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
-                >
-                  {webBrowsingEnabled ? "On" : "Off"}
-                </button>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Fetch fresh context from the public web when crafting answers.
-              </p>
+               </div>
+
+               <div className="flex items-center justify-between rounded-md border border-border/40 p-3 bg-background/40">
+                  <div>
+                    <p className="text-xs font-medium">Web Search</p>
+                    <p className="text-[9px] text-muted-foreground">Live context retrieval</p>
+                  </div>
+                  <button
+                    className={`w-9 h-5 rounded-full transition-colors relative ${
+                      webBrowsingEnabled ? "bg-primary" : "bg-muted"
+                    }`}
+                    onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
+                  >
+                    <div className={`absolute top-1 left-1 bg-background w-3 h-3 rounded-full transition-transform ${
+                      webBrowsingEnabled ? "translate-x-4" : "translate-x-0"
+                    }`} />
+                  </button>
+               </div>
             </div>
-            </div>
-            <MessageInput
-              agentsCount={agentsCount}
-              maxAgents={MAX_WORKERS}
-              onAgentsChange={setAgentsCount}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-              onSend={handleSend}
-              isSending={isSending}
-              libraryFiles={libraryFiles}
-              onAttachFromLibrary={handleAttachLibraryFile}
-              onRefreshLibrary={handleRefreshLibrary}
-              isLibraryLoading={isLibraryLoading || attachLibraryMutation.isPending}
-            />
-          </TabsContent>
-          <TabsContent value="perspectives" className="mt-4">
+         </div>
+
+         <div className="flex-1 rounded-xl border border-border/40 bg-card/40 p-4 flex flex-col min-h-0">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Latest Swarm</h3>
             {latestSwarm ? (
-              <Card className="space-y-3 border border-border/60 bg-card/70 p-4 text-sm">
-                <p className="text-sm font-semibold">
-                  Workers voted for{" "}
-                  <span className="text-primary">
-                    {
-                      latestSwarm.candidates.find(
-                        (candidate) =>
-                          candidate.id === latestSwarm.votingResult.winnerId,
-                      )?.workerName
-                    }
-                  </span>
-                </p>
-                <p className="text-muted-foreground">
-                  {latestSwarm.finalReasoning}
-                </p>
-                <button
-                  type="button"
-                  className="text-primary underline-offset-4 hover:underline"
+              <div className="flex-1 flex flex-col min-h-0 space-y-3">
+                 <div>
+                    <p className="text-[10px] text-muted-foreground uppercase mb-1">Winner</p>
+                    <p className="text-sm font-semibold text-primary truncate">
+                      {latestSwarm.candidates.find(c => c.id === latestSwarm.votingResult.winnerId)?.workerName}
+                    </p>
+                 </div>
+                 <div className="flex-1 min-h-0 overflow-y-auto relative pr-1">
+                    <p className="text-xs text-muted-foreground line-clamp-[10]">
+                      {latestSwarm.finalReasoning}
+                    </p>
+                 </div>
+                 <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="w-full text-xs mt-auto"
                   onClick={() => handleViewSwarm(latestSwarm)}
                 >
-                  View details
-                </button>
-              </Card>
+                  View Full Details
+                 </Button>
+              </div>
             ) : (
-              <Card className="border border-dashed border-border/60 bg-card/60 p-4 text-sm text-muted-foreground">
-                Swarm details will appear after your first question.
-              </Card>
+              <div className="flex-1 flex items-center justify-center text-center p-4 border-2 border-dashed border-border/30 rounded-lg">
+                <p className="text-xs text-muted-foreground">Run a query to see swarm analysis here.</p>
+              </div>
             )}
-          </TabsContent>
-          <TabsContent value="settings" className="mt-4">
-            <Card className="space-y-3 border border-border/60 bg-card/70 p-4 text-sm">
-              <h3 className="font-semibold text-foreground">Session Settings</h3>
-              <p className="text-muted-foreground">
-                Active mode: <strong>{currentMode === "fast" ? "Fast" : "Reasoning"}</strong>
-              </p>
-              <p className="text-muted-foreground">
-                Discussion: <strong>{discussionEnabled ? "Enabled" : "Disabled"}</strong>
-              </p>
-              <p className="text-muted-foreground">
-                Max workers: {MAX_WORKERS} · Attachments per turn:{" "}
-                <strong>5</strong>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                All state is stored locally; refresh clears the transcript.
-              </p>
-            </Card>
-          </TabsContent>
+         </div>
+      </div>
+
+      {/* Mobile / Tablet View (Tabbed) */}
+      <div className="lg:hidden flex flex-col h-full w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <div className="border-b border-border/60 px-4 pt-2">
+             <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-sm">Swarm Consensus</span>
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>Sign Out</Button>
+             </div>
+             <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+              <TabsTrigger value="settings">Config</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <div className="flex-1 overflow-hidden relative bg-background">
+            <TabsContent value="chat" className="h-full flex flex-col data-[state=inactive]:hidden m-0 p-0">
+               <div className="flex-1 min-h-0">
+                  <MessageList
+                    messages={messages}
+                    isStreaming={isSending}
+                    onViewSwarm={handleViewSwarm}
+                  />
+               </div>
+               <div className="p-3 border-t border-border/40 bg-card/30">
+                  <MessageInput
+                    agentsCount={agentsCount}
+                    maxAgents={MAX_WORKERS}
+                    onAgentsChange={setAgentsCount}
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    onSend={handleSend}
+                    isSending={isSending}
+                    libraryFiles={libraryFiles}
+                    onAttachFromLibrary={handleAttachLibraryFile}
+                    onRefreshLibrary={handleRefreshLibrary}
+                    isLibraryLoading={isLibraryLoading || attachLibraryMutation.isPending}
+                  />
+               </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="h-full overflow-y-auto p-4 data-[state=inactive]:hidden m-0">
+               <div className="space-y-4">
+                  <Button className="w-full" onClick={handleCreateConversation}>+ New Chat</Button>
+                  <Input 
+                    placeholder="Search chats..." 
+                    value={conversationSearchQuery}
+                    onChange={(e) => setConversationSearchQuery(e.target.value)}
+                  />
+                  <div className="space-y-1">
+                    {filteredConversations.map(renderConversationRow)}
+                  </div>
+               </div>
+            </TabsContent>
+
+            <TabsContent value="settings" className="h-full overflow-y-auto p-4 data-[state=inactive]:hidden m-0">
+               <Card className="p-4 space-y-6">
+                  <div>
+                    <h3 className="font-medium mb-2">AI Model</h3>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                       <Button 
+                        variant={currentMode === "fast" ? "default" : "outline"} 
+                        onClick={() => handleModeChange("fast")}
+                        size="sm"
+                      >
+                        Fast
+                      </Button>
+                       <Button 
+                        variant={currentMode === "reasoning" ? "default" : "outline"} 
+                        onClick={() => handleModeChange("reasoning")}
+                        size="sm"
+                      >
+                        Reasoning
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                       <Button 
+                        variant={currentProvider === "openai" ? "default" : "outline"} 
+                        onClick={() => handleProviderChange("openai")}
+                        size="sm"
+                      >
+                        OpenAI
+                      </Button>
+                       <Button 
+                        variant={currentProvider === "gemini" ? "default" : "outline"} 
+                        onClick={() => handleProviderChange("gemini")}
+                        size="sm"
+                      >
+                        Gemini
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between">
+                        <span>Discussion Round</span>
+                        <Button 
+                          variant={discussionEnabled ? "default" : "secondary"}
+                          onClick={() => handleDiscussionToggle(!discussionEnabled)}
+                          size="sm"
+                        >
+                          {discussionEnabled ? "On" : "Off"}
+                        </Button>
+                     </div>
+                     <div className="flex items-center justify-between">
+                        <span>Web Browsing</span>
+                        <Button 
+                          variant={webBrowsingEnabled ? "default" : "secondary"}
+                          onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
+                          size="sm"
+                        >
+                          {webBrowsingEnabled ? "On" : "Off"}
+                        </Button>
+                     </div>
+                  </div>
+               </Card>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
 
@@ -1113,4 +1061,3 @@ function formatBytes(bytes?: number) {
   const value = bytes / 1024 ** exponent;
   return `${value.toFixed(value < 10 ? 1 : 0)} ${units[exponent]}`;
 }
-

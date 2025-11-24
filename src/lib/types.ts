@@ -85,6 +85,7 @@ export type MinimalHistory = {
 };
 
 export type SwarmMode = "fast" | "reasoning";
+export type AIProvider = "openai" | "gemini";
 
 export type ChatMessage = {
   id: string;
@@ -101,6 +102,7 @@ export type Conversation = {
   createdAt: string;
   updatedAt: string;
   mode: SwarmMode;
+  provider: AIProvider;
   discussionEnabled: boolean;
   webBrowsingEnabled: boolean;
   messages: ChatMessage[];
@@ -113,6 +115,7 @@ export type SwarmTurnParams = {
   files: UploadedFileRef[];
   history: MinimalHistory[];
   mode: SwarmMode;
+  provider: AIProvider;
   discussionEnabled: boolean;
   webBrowsingEnabled: boolean;
 };
@@ -126,4 +129,3 @@ export type SwarmTurnResult = {
   votingResult: VotingResult;
   webFindings?: WebSearchFinding[];
 };
-
