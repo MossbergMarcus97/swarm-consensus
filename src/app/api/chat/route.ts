@@ -23,6 +23,7 @@ type IncomingBody = {
   history?: MinimalHistory[];
   conversationId?: string;
   mode?: SwarmMode;
+  provider?: string; // Using string loosely to avoid tight coupling on import if types aren't shared perfectly in route
   discussionEnabled?: boolean;
   webBrowsingEnabled?: boolean;
 };
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       files = [],
       history = [],
       mode = "fast",
+      provider = "openai",
       discussionEnabled = false,
       webBrowsingEnabled = false,
       conversationId,
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
       files: verifiedFiles,
       history: sanitizedHistory,
       mode: mode === "reasoning" ? "reasoning" : "fast",
+      provider: provider === "gemini" ? "gemini" : "openai",
       discussionEnabled: Boolean(discussionEnabled),
       webBrowsingEnabled: Boolean(webBrowsingEnabled),
     });

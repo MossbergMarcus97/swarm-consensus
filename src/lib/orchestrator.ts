@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks";
 
-import { getJudgeAgents, selectWorkers } from "@/lib/agentsConfig";
+import { getJudgeAgents } from "@/lib/agentsConfig";
+import { generateAgents } from "@/lib/agentGenerator";
 import {
   FINALIZER_RUNNER_UP_COUNT,
   getModelPreset,
@@ -12,6 +13,7 @@ import {
   callWorkerModel,
 } from "@/lib/openaiClient";
 import { runWebSearch } from "@/lib/tools/webSearch";
+import { parseJsonFromModel } from "@/lib/utils";
 import type {
   CandidateAnswer,
   JudgeVote,
@@ -23,6 +25,7 @@ import type {
   WorkerAgentProfile,
   JudgeAgentProfile,
   WebSearchFinding,
+  AIProvider,
 } from "@/lib/types";
 
 type ResponseInputContent =
@@ -67,6 +70,7 @@ export async function runSwarmTurn(
     files = [],
     history = [],
     mode,
+    provider = "openai",
     discussionEnabled,
     webBrowsingEnabled,
   } = params;
@@ -77,8 +81,18 @@ export async function runSwarmTurn(
 
   const historySnippet = buildHistorySnippet(history);
   const fileParts = buildFileParts(files);
-  const workers = selectWorkers(agentsCount);
-  const modelPreset = getModelPreset(mode);
+  // Note: We pass provider here to ensure we get the right model string
+  const modelPreset = getModelPresetWithProvider(mode, provider);
+  
+  const workers = await generateAgents({
+    userMessage,
+    count: agentsCount,
+    model: modelPreset.generator,
+    workerModel: modelPreset.worker,
+    // We must propagate provider to the generator so it uses the right client/model
+    provider,
+  });
+  
   let webFindings: WebSearchFinding[] = [];
   let webSummary = "";
 
@@ -101,6 +115,7 @@ export async function runSwarmTurn(
         webSummary,
         model: modelPreset.worker,
         reasoningEffort: mode === "reasoning" ? "medium" : undefined,
+        provider,
       }),
     ),
   );
@@ -115,6 +130,7 @@ export async function runSwarmTurn(
       userMessage,
       model: modelPreset.worker,
       enableReasoning: mode === "reasoning",
+      provider,
     });
   }
 
@@ -128,6 +144,7 @@ export async function runSwarmTurn(
         webSummary,
         model: modelPreset.judge,
         reasoningEffort: mode === "reasoning" ? "medium" : undefined,
+        provider,
       }),
     ),
   );
@@ -140,6 +157,7 @@ export async function runSwarmTurn(
     webSummary,
     model: modelPreset.finalizer,
     enableReasoning: mode === "reasoning",
+    provider,
   });
 
   return {
@@ -153,6 +171,33 @@ export async function runSwarmTurn(
     votes,
     votingResult,
     webFindings: webFindings.length ? webFindings : undefined,
+  };
+}
+
+// --- Helper to get presets respecting provider override ---
+// We duplicate the logic from config temporarily or we could update config.ts
+// But config.ts relies on env vars. Here we need per-request override.
+// Let's define a local helper that mirrors config but takes provider arg.
+function getModelPresetWithProvider(mode: "fast" | "reasoning", provider: AIProvider) {
+  const isGemini = provider === "gemini";
+  // Hardcoded fallback strings if env vars not set, mirroring config.ts default logic
+  // but dynamic based on the provider argument.
+  
+  if (mode === "reasoning") {
+    return {
+      worker: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_REASONING_WORKER_MODEL ?? "gpt-5.1"),
+      judge: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_REASONING_JUDGE_MODEL ?? "gpt-5.1"),
+      finalizer: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_REASONING_FINALIZER_MODEL ?? "gpt-5.1"),
+      generator: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_REASONING_GENERATOR_MODEL ?? "gpt-5.1"),
+    };
+  }
+  
+  // Fast mode
+  return {
+    worker: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_FAST_WORKER_MODEL ?? "gpt-5-mini"),
+    judge: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_FAST_JUDGE_MODEL ?? "gpt-5-mini"),
+    finalizer: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_FAST_FINALIZER_MODEL ?? "gpt-5-mini"),
+    generator: isGemini ? "gemini-2.0-flash-exp" : (process.env.SWARM_FAST_GENERATOR_MODEL ?? "gpt-5-mini"),
   };
 }
 
@@ -185,6 +230,7 @@ async function runWorkerCandidate({
   webSummary,
   model,
   reasoningEffort,
+  provider,
 }: {
   worker: WorkerAgentProfile;
   userMessage: string;
@@ -193,6 +239,7 @@ async function runWorkerCandidate({
   webSummary: string;
   model: string;
   reasoningEffort?: "low" | "medium" | "high";
+  provider: AIProvider;
 }): Promise<CandidateAnswer> {
   const started = performance.now();
   try {
@@ -223,6 +270,7 @@ async function runWorkerCandidate({
       ] satisfies ResponseInputMessage[],
       modelOverride: model,
       reasoningEffort,
+      provider,
     });
 
     const json = parseJsonResponse<WorkerJson>(response, {
@@ -267,11 +315,13 @@ async function runDiscussionRound({
   userMessage,
   model,
   enableReasoning,
+  provider,
 }: {
   candidates: CandidateAnswer[];
   userMessage: string;
   model: string;
   enableReasoning: boolean;
+  provider: AIProvider;
 }): Promise<CandidateAnswer[]> {
   return Promise.all(
     candidates.map(async (candidate) => {
@@ -314,6 +364,7 @@ async function runDiscussionRound({
           ] satisfies ResponseInputMessage[],
           modelOverride: model,
           reasoningEffort: enableReasoning ? "medium" : undefined,
+          provider,
         });
 
         const json = parseJsonResponse<WorkerJson>(response, {
@@ -346,6 +397,7 @@ async function runJudgeVote({
   webSummary,
   model,
   reasoningEffort,
+  provider,
 }: {
   judge: JudgeAgentProfile;
   userMessage: string;
@@ -353,6 +405,7 @@ async function runJudgeVote({
   webSummary: string;
   model: string;
   reasoningEffort?: "low" | "medium" | "high";
+  provider: AIProvider;
 }): Promise<JudgeVote> {
   try {
     const response = await callJudgeModel({
@@ -384,6 +437,7 @@ async function runJudgeVote({
       ] satisfies ResponseInputMessage[],
       modelOverride: model,
       reasoningEffort,
+      provider,
     });
 
     const json = parseJsonResponse<JudgeJson>(response, {
@@ -426,6 +480,7 @@ async function runFinalizer({
   webSummary,
   model,
   enableReasoning,
+  provider,
 }: {
   userMessage: string;
   candidates: CandidateAnswer[];
@@ -433,6 +488,7 @@ async function runFinalizer({
   webSummary: string;
   model: string;
   enableReasoning: boolean;
+  provider: AIProvider;
 }): Promise<FinalizerJson> {
   const winner =
     candidates.find((candidate) => candidate.id === votingResult.winnerId) ??
@@ -498,6 +554,7 @@ async function runFinalizer({
     ] satisfies ResponseInputMessage[],
     modelOverride: model,
     reasoningEffort: enableReasoning ? "medium" : undefined,
+    provider,
   });
 
   return parseJsonResponse<FinalizerJson>(response, {
@@ -543,18 +600,15 @@ export function aggregateVotes(
 
 function parseJsonResponse<T>(response: ModelResponse, fallback: T): T {
   const text = extractResponseText(response);
-  if (!text) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return fallback;
-  }
+  return parseJsonFromModel(text, fallback);
 }
 
 function extractResponseText(response: ModelResponse): string {
+  // Handle standard OpenAI response structure
+  if ('choices' in response && Array.isArray((response as any).choices) && (response as any).choices.length > 0) {
+    return (response as any).choices[0].message?.content || "";
+  }
+
   const base = (response as unknown) as {
     output_text?: string[];
     output?: ResponseOutputItem[];
@@ -621,4 +675,3 @@ function formatWebFindings(findings: WebSearchFinding[]) {
     })
     .join("\n\n");
 }
-
