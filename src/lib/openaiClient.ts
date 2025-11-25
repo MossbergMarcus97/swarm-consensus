@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 import { AI_PROVIDER, MODEL_PRESETS } from "@/lib/config";
 import type { JudgeAgentProfile, WorkerAgentProfile } from "@/lib/types";
@@ -88,13 +88,13 @@ function convertMessagesToGeminiFormat(
 // Map reasoning effort to Gemini thinking level
 function mapReasoningToThinkingLevel(
   reasoningEffort?: "low" | "medium" | "high"
-): "low" | "high" {
+): ThinkingLevel {
   // Gemini 3 Pro doesn't support "medium" at launch
   // "medium" maps to "high", undefined defaults to "low" for faster responses
   if (reasoningEffort === "high" || reasoningEffort === "medium") {
-    return "high";
+    return ThinkingLevel.HIGH;
   }
-  return "low";
+  return ThinkingLevel.LOW;
 }
 
 // Wrapper to normalize Gemini response to OpenAI-like format
