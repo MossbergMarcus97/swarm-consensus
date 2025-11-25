@@ -20,34 +20,47 @@ const DISCUSSION_TIME_MULTIPLIER = Number(
   process.env.SWARM_DISCUSSION_TIME_MULTIPLIER ?? 1.75,
 );
 
+export const AI_PROVIDER =
+  process.env.AI_PROVIDER ?? process.env.NEXT_PUBLIC_AI_PROVIDER ?? "openai";
+
+const isGemini = AI_PROVIDER === "gemini";
+
 export const MODEL_PRESETS = {
   fast: {
     worker:
       process.env.SWARM_FAST_WORKER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_WORKER_MODEL ??
-      "gpt-5-mini",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
     judge:
       process.env.SWARM_FAST_JUDGE_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_JUDGE_MODEL ??
-      "gpt-5-mini",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
     finalizer:
       process.env.SWARM_FAST_FINALIZER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_FINALIZER_MODEL ??
-      "gpt-5-mini",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
+    generator:
+      process.env.SWARM_FAST_GENERATOR_MODEL ??
+      process.env.NEXT_PUBLIC_SWARM_FAST_GENERATOR_MODEL ??
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
   },
   reasoning: {
     worker:
       process.env.SWARM_REASONING_WORKER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_REASONING_WORKER_MODEL ??
-      "gpt-5.1",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
     judge:
       process.env.SWARM_REASONING_JUDGE_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_REASONING_JUDGE_MODEL ??
-      "gpt-5.1",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
     finalizer:
       process.env.SWARM_REASONING_FINALIZER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_REASONING_FINALIZER_MODEL ??
-      "gpt-5.1",
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
+    generator:
+      process.env.SWARM_REASONING_GENERATOR_MODEL ??
+      process.env.NEXT_PUBLIC_SWARM_REASONING_GENERATOR_MODEL ??
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
   },
 } as const;
 
@@ -73,5 +86,3 @@ export function estimateSwarmRuntimeSeconds({
   const discussionFactor = discussionEnabled ? DISCUSSION_TIME_MULTIPLIER : 1;
   return agentsCount * perAgent * discussionFactor;
 }
-
-
