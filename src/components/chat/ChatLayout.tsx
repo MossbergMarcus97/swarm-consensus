@@ -908,20 +908,67 @@ export function ChatLayout() {
       {/* Mobile / Tablet View (Tabbed) */}
       <div className="lg:hidden flex flex-col h-full w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          <div className="border-b border-border/60 px-4 pt-2">
-             <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-sm">Swarm Consensus</span>
-                <Button variant="ghost" size="sm" onClick={() => signOut()}>Sign Out</Button>
+          {/* Mobile Header */}
+          <div className="bg-gradient-to-b from-background to-background/80 backdrop-blur-xl border-b border-border/40 px-4 pt-3 pb-2 safe-area-inset-top">
+             <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="font-bold text-sm text-foreground leading-tight">Swarm Consensus</h1>
+                    <p className="text-[10px] text-muted-foreground">
+                      {currentProvider === 'openai' ? 'OpenAI' : 'Gemini'} · {currentMode === 'fast' ? 'Fast' : 'Reasoning'}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground"
+                  onClick={() => signOut()}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                </Button>
              </div>
-             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="chat">Chat</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-              <TabsTrigger value="settings">Config</TabsTrigger>
+             
+             {/* Mobile Tab Navigation */}
+             <TabsList className="grid w-full grid-cols-3 h-11 p-1 bg-muted/50 rounded-xl">
+              <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 text-xs font-medium">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Chat
+              </TabsTrigger>
+              <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 text-xs font-medium">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                History
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 text-xs font-medium">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                Config
+              </TabsTrigger>
             </TabsList>
           </div>
           
-          <div className="flex-1 overflow-hidden relative bg-background">
+          {/* Tab Content */}
+          <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-background via-background to-muted/20">
+            {/* Chat Tab */}
             <TabsContent value="chat" className="h-full flex flex-col data-[state=inactive]:hidden m-0 p-0">
+               {/* Chat Header - Shows current conversation */}
+               <div className="px-4 py-2 border-b border-border/30 bg-background/50 backdrop-blur-sm">
+                 <p className="text-xs font-medium text-foreground truncate">{activeConversation.title}</p>
+                 <p className="text-[10px] text-muted-foreground">{messages.length} messages · {agentsCount} workers</p>
+               </div>
+               
                <div className="flex-1 min-h-0">
                   <MessageList
                     messages={messages}
@@ -929,7 +976,7 @@ export function ChatLayout() {
                     onViewSwarm={handleViewSwarm}
                   />
                </div>
-               <div className="p-3 border-t border-border/40 bg-card/30">
+               <div className="p-3 border-t border-border/40 bg-card/50 backdrop-blur-sm safe-area-inset-bottom">
                   <MessageInput
                     agentsCount={agentsCount}
                     maxAgents={MAX_WORKERS}
@@ -946,81 +993,241 @@ export function ChatLayout() {
                </div>
             </TabsContent>
 
-            <TabsContent value="history" className="h-full overflow-y-auto p-4 data-[state=inactive]:hidden m-0">
-               <div className="space-y-4">
-                  <Button className="w-full" onClick={handleCreateConversation}>+ New Chat</Button>
-                  <Input 
-                    placeholder="Search chats..." 
-                    value={conversationSearchQuery}
-                    onChange={(e) => setConversationSearchQuery(e.target.value)}
-                  />
-                  <div className="space-y-1">
-                    {filteredConversations.map(renderConversationRow)}
+            {/* History Tab */}
+            <TabsContent value="history" className="h-full overflow-y-auto data-[state=inactive]:hidden m-0">
+               <div className="p-4 space-y-4">
+                  {/* New Chat Button */}
+                  <Button 
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 font-semibold" 
+                    onClick={handleCreateConversation}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="mr-2">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    New Conversation
+                  </Button>
+                  
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search conversations..." 
+                      value={conversationSearchQuery}
+                      onChange={(e) => setConversationSearchQuery(e.target.value)}
+                      className="pl-10 h-11 rounded-xl bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50"
+                    />
+                  </div>
+                  
+                  {/* Conversation List */}
+                  <div className="space-y-2">
+                    {noConversationMatches ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3 opacity-50">
+                          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        No matching conversations
+                      </div>
+                    ) : (
+                      filteredConversations.map((conversation) => (
+                        <div
+                          key={conversation.id}
+                          className={`rounded-xl p-4 transition-all cursor-pointer active:scale-[0.98] ${
+                            conversation.id === activeConversationId
+                              ? "bg-primary/10 border-2 border-primary/30 shadow-sm"
+                              : "bg-card/60 border border-border/40 hover:bg-card"
+                          }`}
+                          onClick={() => {
+                            setActiveConversationId(conversation.id);
+                            setActiveTab("chat");
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-semibold text-sm truncate ${
+                                conversation.id === activeConversationId ? "text-primary" : "text-foreground"
+                              }`}>
+                                {conversation.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {conversation.messages.length} messages
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                conversation.mode === 'fast' 
+                                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                                  : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                              }`}>
+                                {conversation.mode}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(conversation.updatedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          {conversation.messages.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-2 line-clamp-1 opacity-70">
+                              {conversation.messages[conversation.messages.length - 1]?.content}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                </div>
             </TabsContent>
 
-            <TabsContent value="settings" className="h-full overflow-y-auto p-4 data-[state=inactive]:hidden m-0">
-               <Card className="p-4 space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-2">AI Model</h3>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                       <Button 
-                        variant={currentMode === "fast" ? "default" : "outline"} 
-                        onClick={() => handleModeChange("fast")}
-                        size="sm"
-                      >
-                        Fast
-                      </Button>
-                       <Button 
-                        variant={currentMode === "reasoning" ? "default" : "outline"} 
-                        onClick={() => handleModeChange("reasoning")}
-                        size="sm"
-                      >
-                        Reasoning
-                      </Button>
-                    </div>
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="h-full overflow-y-auto data-[state=inactive]:hidden m-0">
+               <div className="p-4 space-y-4">
+                  {/* Mode Selection */}
+                  <div className="rounded-2xl bg-card/60 border border-border/40 p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Processing Mode</h3>
                     <div className="grid grid-cols-2 gap-2">
-                       <Button 
-                        variant={currentProvider === "openai" ? "default" : "outline"} 
-                        onClick={() => handleProviderChange("openai")}
-                        size="sm"
+                       <button 
+                        className={`p-4 rounded-xl text-left transition-all active:scale-[0.98] ${
+                          currentMode === "fast" 
+                            ? "bg-primary/10 border-2 border-primary/40 shadow-sm" 
+                            : "bg-muted/50 border border-border/40"
+                        }`}
+                        onClick={() => handleModeChange("fast")}
                       >
-                        OpenAI
-                      </Button>
-                       <Button 
-                        variant={currentProvider === "gemini" ? "default" : "outline"} 
-                        onClick={() => handleProviderChange("gemini")}
-                        size="sm"
+                        <div className={`h-8 w-8 rounded-lg mb-2 flex items-center justify-center ${
+                          currentMode === "fast" ? "bg-primary/20" : "bg-muted"
+                        }`}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={currentMode === "fast" ? "text-primary" : "text-muted-foreground"}>
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                          </svg>
+                        </div>
+                        <p className={`font-semibold text-sm ${currentMode === "fast" ? "text-primary" : "text-foreground"}`}>Fast</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Quick responses</p>
+                      </button>
+                       <button 
+                        className={`p-4 rounded-xl text-left transition-all active:scale-[0.98] ${
+                          currentMode === "reasoning" 
+                            ? "bg-primary/10 border-2 border-primary/40 shadow-sm" 
+                            : "bg-muted/50 border border-border/40"
+                        }`}
+                        onClick={() => handleModeChange("reasoning")}
                       >
-                        Gemini
-                      </Button>
+                        <div className={`h-8 w-8 rounded-lg mb-2 flex items-center justify-center ${
+                          currentMode === "reasoning" ? "bg-primary/20" : "bg-muted"
+                        }`}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={currentMode === "reasoning" ? "text-primary" : "text-muted-foreground"}>
+                            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                          </svg>
+                        </div>
+                        <p className={`font-semibold text-sm ${currentMode === "reasoning" ? "text-primary" : "text-foreground"}`}>Reasoning</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Deep analysis</p>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                     <div className="flex items-center justify-between">
-                        <span>Discussion Round</span>
-                        <Button 
-                          variant={discussionEnabled ? "default" : "secondary"}
-                          onClick={() => handleDiscussionToggle(!discussionEnabled)}
-                          size="sm"
-                        >
-                          {discussionEnabled ? "On" : "Off"}
-                        </Button>
-                     </div>
-                     <div className="flex items-center justify-between">
-                        <span>Web Browsing</span>
-                        <Button 
-                          variant={webBrowsingEnabled ? "default" : "secondary"}
-                          onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
-                          size="sm"
-                        >
-                          {webBrowsingEnabled ? "On" : "Off"}
-                        </Button>
-                     </div>
+                  {/* Provider Selection */}
+                  <div className="rounded-2xl bg-card/60 border border-border/40 p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">AI Provider</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                       <button 
+                        className={`p-4 rounded-xl text-left transition-all active:scale-[0.98] ${
+                          currentProvider === "openai" 
+                            ? "bg-emerald-500/10 border-2 border-emerald-500/40 shadow-sm" 
+                            : "bg-muted/50 border border-border/40"
+                        }`}
+                        onClick={() => handleProviderChange("openai")}
+                      >
+                        <div className={`h-8 w-8 rounded-lg mb-2 flex items-center justify-center ${
+                          currentProvider === "openai" ? "bg-emerald-500/20" : "bg-muted"
+                        }`}>
+                          <span className={`text-sm font-bold ${currentProvider === "openai" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>◐</span>
+                        </div>
+                        <p className={`font-semibold text-sm ${currentProvider === "openai" ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>OpenAI</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">GPT-5.1 series</p>
+                      </button>
+                       <button 
+                        className={`p-4 rounded-xl text-left transition-all active:scale-[0.98] ${
+                          currentProvider === "gemini" 
+                            ? "bg-blue-500/10 border-2 border-blue-500/40 shadow-sm" 
+                            : "bg-muted/50 border border-border/40"
+                        }`}
+                        onClick={() => handleProviderChange("gemini")}
+                      >
+                        <div className={`h-8 w-8 rounded-lg mb-2 flex items-center justify-center ${
+                          currentProvider === "gemini" ? "bg-blue-500/20" : "bg-muted"
+                        }`}>
+                          <span className={`text-sm font-bold ${currentProvider === "gemini" ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}>✦</span>
+                        </div>
+                        <p className={`font-semibold text-sm ${currentProvider === "gemini" ? "text-blue-600 dark:text-blue-400" : "text-foreground"}`}>Gemini</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Gemini 3 Pro</p>
+                      </button>
+                    </div>
                   </div>
-               </Card>
+
+                  {/* Toggles */}
+                  <div className="rounded-2xl bg-card/60 border border-border/40 p-4 space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Features</h3>
+                    
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-background/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Discussion Round</p>
+                          <p className="text-[10px] text-muted-foreground">Agents refine answers together</p>
+                        </div>
+                      </div>
+                      <button
+                        className={`w-12 h-7 rounded-full transition-colors relative ${
+                          discussionEnabled ? "bg-primary" : "bg-muted"
+                        }`}
+                        onClick={() => handleDiscussionToggle(!discussionEnabled)}
+                      >
+                        <div className={`absolute top-1 left-1 bg-background w-5 h-5 rounded-full transition-transform shadow-sm ${
+                          discussionEnabled ? "translate-x-5" : "translate-x-0"
+                        }`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-background/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Web Search</p>
+                          <p className="text-[10px] text-muted-foreground">Include live search results</p>
+                        </div>
+                      </div>
+                      <button
+                        className={`w-12 h-7 rounded-full transition-colors relative ${
+                          webBrowsingEnabled ? "bg-primary" : "bg-muted"
+                        }`}
+                        onClick={() => handleWebBrowsingToggle(!webBrowsingEnabled)}
+                      >
+                        <div className={`absolute top-1 left-1 bg-background w-5 h-5 rounded-full transition-transform shadow-sm ${
+                          webBrowsingEnabled ? "translate-x-5" : "translate-x-0"
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* User Info */}
+                  <div className="rounded-2xl bg-card/60 border border-border/40 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                        {(session?.user?.name?.[0] ?? "U").toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{session?.user?.name ?? "User"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{session?.user?.email}</p>
+                      </div>
+                    </div>
+                  </div>
+               </div>
             </TabsContent>
           </div>
         </Tabs>
