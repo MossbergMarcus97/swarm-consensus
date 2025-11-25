@@ -4,19 +4,26 @@ import { runSwarmTurn } from "@/lib/orchestrator";
 
 type MockResponse = { output_text: string[]; output: unknown[] };
 
-const workerMock = vi.fn<[], Promise<MockResponse>>();
-const judgeMock = vi.fn<[], Promise<MockResponse>>();
-const finalizerMock = vi.fn<[], Promise<MockResponse>>();
-const webSearchMock = vi.fn<[], Promise<{ title: string; url: string; snippet: string }[]>>();
+const workerMock = vi.fn();
+const judgeMock = vi.fn();
+const finalizerMock = vi.fn();
+const webSearchMock = vi.fn();
 
 vi.mock("@/lib/openaiClient", () => ({
-  callWorkerModel: (...args: unknown[]) => workerMock(...args),
-  callJudgeModel: (...args: unknown[]) => judgeMock(...args),
-  callFinalizerModel: (...args: unknown[]) => finalizerMock(...args),
+  callWorkerModel: (...args: unknown[]) => workerMock(),
+  callJudgeModel: (...args: unknown[]) => judgeMock(),
+  callFinalizerModel: (...args: unknown[]) => finalizerMock(),
+}));
+
+vi.mock("@/lib/agentGenerator", () => ({
+  generateAgents: () => Promise.resolve([
+    { id: "1", role: "worker", name: "Agent 1", description: "Test", systemPrompt: "You are a test agent", model: "test" },
+    { id: "2", role: "worker", name: "Agent 2", description: "Test", systemPrompt: "You are a test agent", model: "test" },
+  ]),
 }));
 
 vi.mock("@/lib/tools/webSearch", () => ({
-  runWebSearch: (...args: unknown[]) => webSearchMock(...args),
+  runWebSearch: () => webSearchMock(),
 }));
 
 describe("runSwarmTurn", () => {
@@ -53,6 +60,7 @@ describe("runSwarmTurn", () => {
       files: [],
       history: [],
       mode: "fast",
+      provider: "openai",
       discussionEnabled: false,
       webBrowsingEnabled: false,
     });
@@ -78,6 +86,7 @@ describe("runSwarmTurn", () => {
       files: [],
       history: [],
       mode: "fast",
+      provider: "openai",
       discussionEnabled: false,
       webBrowsingEnabled: true,
     });
