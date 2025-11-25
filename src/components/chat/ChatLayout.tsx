@@ -752,8 +752,8 @@ export function ChatLayout() {
         </div>
       )}
 
-      {/* Main Chat Area */}
-      <div className="flex min-w-0 flex-1 flex-col h-full relative">
+      {/* Main Chat Area - Desktop Only */}
+      <div className="hidden lg:flex min-w-0 flex-1 flex-col h-full relative">
         <header className="flex items-center justify-between border-b border-border/40 px-6 py-3 bg-background/50 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
              {!sidebarOpen && <div className="w-8" />} {/* Spacer for toggle button */}
