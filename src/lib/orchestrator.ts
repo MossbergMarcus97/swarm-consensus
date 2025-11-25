@@ -28,9 +28,11 @@ import type {
   AIProvider,
 } from "@/lib/types";
 
+// Using flexible type for content parts to support both OpenAI file refs and text
 type ResponseInputContent =
   | { type: "text"; text: string }
-  | { type: "input_file"; file_id: string };
+  | { type: "input_file"; file_id: string }
+  | { type: string; [key: string]: unknown };
 
 type ResponseInputMessage = {
   role: "system" | "assistant" | "user" | "developer";
@@ -276,7 +278,7 @@ async function runWorkerCandidate({
             ...fileParts,
           ],
         },
-      ] satisfies ResponseInputMessage[],
+      ] as any,
       modelOverride: model,
       reasoningEffort,
       provider,
@@ -370,7 +372,7 @@ async function runDiscussionRound({
                 },
               ],
             },
-          ] satisfies ResponseInputMessage[],
+          ] as any,
           modelOverride: model,
           reasoningEffort: enableReasoning ? "high" : "low",
           provider,
@@ -443,7 +445,7 @@ async function runJudgeVote({
             },
           ],
         },
-      ] satisfies ResponseInputMessage[],
+      ] as any,
       modelOverride: model,
       reasoningEffort,
       provider,
@@ -560,7 +562,7 @@ async function runFinalizer({
           },
         ],
       },
-    ] satisfies ResponseInputMessage[],
+    ] as any,
     modelOverride: model,
     reasoningEffort: enableReasoning ? "high" : "low",
     provider,
