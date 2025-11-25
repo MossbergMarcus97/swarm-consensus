@@ -910,24 +910,22 @@ export function ChatLayout() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* Mobile Header */}
           <div className="bg-gradient-to-b from-background to-background/80 backdrop-blur-xl border-b border-border/40 px-4 pt-3 pb-2 safe-area-inset-top">
-             <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h1 className="font-bold text-sm text-foreground leading-tight">Swarm Consensus</h1>
-                    <p className="text-[10px] text-muted-foreground">
-                      {currentProvider === 'openai' ? 'OpenAI' : 'Gemini'} · {currentMode === 'fast' ? 'Fast' : 'Reasoning'}
-                    </p>
-                  </div>
+             <div className="flex items-center gap-3 mb-3">
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="font-bold text-sm text-foreground leading-tight truncate">Swarm Consensus</h1>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {currentProvider === 'openai' ? 'OpenAI' : 'Gemini'} · {currentMode === 'fast' ? 'Fast' : 'Reasoning'}
+                  </p>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="h-8 w-8 rounded-full text-muted-foreground"
+                  className="h-8 w-8 rounded-full text-muted-foreground shrink-0"
                   onClick={() => signOut()}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
