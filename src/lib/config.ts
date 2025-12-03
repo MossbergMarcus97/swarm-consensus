@@ -30,19 +30,19 @@ export const MODEL_PRESETS = {
     worker:
       process.env.SWARM_FAST_WORKER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_WORKER_MODEL ??
-      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
     judge:
       process.env.SWARM_FAST_JUDGE_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_JUDGE_MODEL ??
-      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
     finalizer:
       process.env.SWARM_FAST_FINALIZER_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_FINALIZER_MODEL ??
-      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
     generator:
       process.env.SWARM_FAST_GENERATOR_MODEL ??
       process.env.NEXT_PUBLIC_SWARM_FAST_GENERATOR_MODEL ??
-      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1-mini"),
+      (isGemini ? "gemini-3-pro-preview" : "gpt-5.1"),
   },
   reasoning: {
     worker:
