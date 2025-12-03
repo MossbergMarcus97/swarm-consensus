@@ -11,6 +11,7 @@ import {
   callFinalizerModel,
   callJudgeModel,
   callWorkerModel,
+  type ReasoningEffort,
 } from "@/lib/openaiClient";
 import { runWebSearch } from "@/lib/tools/webSearch";
 import { parseJsonFromModel } from "@/lib/utils";
@@ -85,6 +86,8 @@ export async function runSwarmTurn(
   const fileParts = buildFileParts(files, provider);
   // Note: We pass provider here to ensure we get the right model string
   const modelPreset = getModelPresetWithProvider(mode, provider);
+  const baseReasoningEffort: ReasoningEffort =
+    mode === "reasoning" ? "high" : "none";
   
   const workers = await generateAgents({
     userMessage,
@@ -116,7 +119,7 @@ export async function runSwarmTurn(
         fileParts,
         webSummary,
         model: modelPreset.worker,
-        reasoningEffort: mode === "reasoning" ? "high" : "low",
+        reasoningEffort: baseReasoningEffort,
         provider,
       }),
     ),
@@ -145,7 +148,7 @@ export async function runSwarmTurn(
         candidates,
         webSummary,
         model: modelPreset.judge,
-        reasoningEffort: mode === "reasoning" ? "high" : "low",
+        reasoningEffort: baseReasoningEffort,
         provider,
       }),
     ),
@@ -196,10 +199,10 @@ function getModelPresetWithProvider(mode: "fast" | "reasoning", provider: AIProv
   
   // Fast mode
   return {
-    worker: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_WORKER_MODEL ?? "gpt-5.1-mini"),
-    judge: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_JUDGE_MODEL ?? "gpt-5.1-mini"),
-    finalizer: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_FINALIZER_MODEL ?? "gpt-5.1-mini"),
-    generator: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_GENERATOR_MODEL ?? "gpt-5.1-mini"),
+    worker: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_WORKER_MODEL ?? "gpt-5.1"),
+    judge: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_JUDGE_MODEL ?? "gpt-5.1"),
+    finalizer: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_FINALIZER_MODEL ?? "gpt-5.1"),
+    generator: isGemini ? "gemini-3-pro-preview" : (process.env.SWARM_FAST_GENERATOR_MODEL ?? "gpt-5.1"),
   };
 }
 
@@ -249,7 +252,7 @@ async function runWorkerCandidate({
   fileParts: ResponseInputContent[];
   webSummary: string;
   model: string;
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
   provider: AIProvider;
 }): Promise<CandidateAnswer> {
   const started = performance.now();
@@ -374,7 +377,7 @@ async function runDiscussionRound({
             },
           ] as any,
           modelOverride: model,
-          reasoningEffort: enableReasoning ? "high" : "low",
+          reasoningEffort: enableReasoning ? "high" : "none",
           provider,
         });
 
@@ -415,7 +418,7 @@ async function runJudgeVote({
   candidates: CandidateAnswer[];
   webSummary: string;
   model: string;
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
   provider: AIProvider;
 }): Promise<JudgeVote> {
   try {
@@ -564,7 +567,7 @@ async function runFinalizer({
       },
     ] as any,
     modelOverride: model,
-    reasoningEffort: enableReasoning ? "high" : "low",
+    reasoningEffort: enableReasoning ? "high" : "none",
     provider,
   });
 

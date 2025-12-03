@@ -44,12 +44,12 @@ Swarm Consensus is a production-grade swarm-orchestrated chat workspace. Each tu
    ```bash
    # OpenAI
    OPENAI_API_KEY=sk-...
-   SWARM_FAST_WORKER_MODEL=gpt-5-mini          # override if your org uses different IDs
-   SWARM_FAST_JUDGE_MODEL=gpt-5-mini
-   SWARM_FAST_FINALIZER_MODEL=gpt-5-mini
-   SWARM_REASONING_WORKER_MODEL=gpt-5
-   SWARM_REASONING_JUDGE_MODEL=gpt-5
-   SWARM_REASONING_FINALIZER_MODEL=gpt-5
+  SWARM_FAST_WORKER_MODEL=gpt-5.1          # override if your org uses different IDs
+  SWARM_FAST_JUDGE_MODEL=gpt-5.1
+  SWARM_FAST_FINALIZER_MODEL=gpt-5.1
+  SWARM_REASONING_WORKER_MODEL=gpt-5.1
+  SWARM_REASONING_JUDGE_MODEL=gpt-5.1
+  SWARM_REASONING_FINALIZER_MODEL=gpt-5.1
    NEXT_PUBLIC_MAX_FILES=5
    NEXT_PUBLIC_MAX_FILE_SIZE_MB=25
 
@@ -68,7 +68,9 @@ Swarm Consensus is a production-grade swarm-orchestrated chat workspace. Each tu
    SWARM_RUNTIME_BUDGET_SECONDS=280          # lower this if your host has tighter limits
    ```
 
-   > **Model availability:** If your OpenAI org/project doesn't expose GPT‑5.x yet, override the `SWARM_*` env vars with the models you *do* have access to (e.g. `gpt-4.1-mini`). Restart the dev server after changing them.
+  > **Model availability:** If your OpenAI org/project doesn't expose GPT‑5.x yet, override the `SWARM_*` env vars with the models you *do* have access to (e.g. `gpt-4.1-mini`). Restart the dev server after changing them.
+  >
+  > **Reasoning effort presets:** Fast mode now runs `gpt-5.1` with `reasoning_effort=none` (per [latest-model guidance](https://platform.openai.com/docs/guides/latest-model)). Reasoning mode keeps the same model but requests `reasoning_effort=high` for deeper chains of thought.
 >
 > **Runtime budget:** Vercel’s Node runtime caps requests at 300 s. The `SWARM_RUNTIME_BUDGET_SECONDS` guard (default 280) keeps heavy swarms from triggering timeouts—reduce it further if you host on infra with smaller limits.
 

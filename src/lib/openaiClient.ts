@@ -7,6 +7,8 @@ import type { JudgeAgentProfile, WorkerAgentProfile } from "@/lib/types";
 // Standard OpenAI Chat Completion types
 type ChatCompletionCreateParams = OpenAI.Chat.ChatCompletionCreateParams;
 
+export type ReasoningEffort = "none" | "low" | "medium" | "high";
+
 // Gemini client singleton
 let geminiClient: GoogleGenAI | null = null;
 
@@ -87,10 +89,10 @@ function convertMessagesToGeminiFormat(
 
 // Map reasoning effort to Gemini thinking level
 function mapReasoningToThinkingLevel(
-  reasoningEffort?: "low" | "medium" | "high"
+  reasoningEffort?: ReasoningEffort
 ): ThinkingLevel {
   // Gemini 3 Pro doesn't support "medium" at launch
-  // "medium" maps to "high", undefined defaults to "low" for faster responses
+  // "medium" maps to "high"; "none" (or undefined) downgrades to "low" for speed
   if (reasoningEffort === "high" || reasoningEffort === "medium") {
     return ThinkingLevel.HIGH;
   }
@@ -113,7 +115,7 @@ async function callGeminiModel({
 }: {
   model: string;
   messages: ChatCompletionCreateParams["messages"];
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
 }): Promise<NormalizedResponse> {
   const client = getGeminiClient();
   const { systemInstruction, contents } = convertMessagesToGeminiFormat(messages);
@@ -166,7 +168,7 @@ export async function callWorkerModel({
   agent: WorkerAgentProfile;
   input: ChatCompletionCreateParams["messages"];
   modelOverride?: string;
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
   provider?: "openai" | "gemini";
 }) {
   const fallbackModel = modelOverride ?? agent.model ?? MODEL_PRESETS.fast.worker;
@@ -205,7 +207,7 @@ export async function callJudgeModel({
   judge: JudgeAgentProfile;
   input: ChatCompletionCreateParams["messages"];
   modelOverride?: string;
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
   provider?: "openai" | "gemini";
 }) {
   const fallbackModel = modelOverride ?? judge.model ?? MODEL_PRESETS.fast.judge;
@@ -237,7 +239,7 @@ export async function callFinalizerModel({
 }: {
   input: ChatCompletionCreateParams["messages"];
   modelOverride?: string;
-  reasoningEffort?: "low" | "medium" | "high";
+  reasoningEffort?: ReasoningEffort;
   provider?: "openai" | "gemini";
 }) {
   const model = modelOverride ?? MODEL_PRESETS.fast.finalizer;
@@ -276,7 +278,7 @@ export async function callGeneratorModel({
     return callGeminiModel({
       model,
       messages: input,
-      reasoningEffort: "low", // Generator should be fast
+      reasoningEffort: "none", // Generator should be fast
     });
   }
 
